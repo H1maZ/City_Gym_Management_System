@@ -12,6 +12,8 @@
 
     <table border="1" cellpadding="10">
 
+
+        <tr><td>Admission No</td><td>${admissionNo}</td></tr>
         <tr><td>Name</td><td>${name}</td></tr>
         <tr><td>Phone</td><td>${phone}</td></tr>
         <tr><td>Gender</td><td>${gender}</td></tr>
@@ -57,6 +59,11 @@
                 <td><input type="file" name="photo" accept="image/*"></td>
             </tr>
 
+
+            <tr>
+                <td>Admission No</td>
+                <td><input type="text" name="admissionNo" value="${admissionNo}" required></td>
+            </tr>
             <tr><td>Name</td><td><input type="text" name="name" value="${name}" required></td></tr>
             <tr><td>Phone</td><td><input type="text" name="phone" value="${phone}"></td></tr>
             <tr><td>Gender</td><td><input type="text" name="gender" value="${gender}"></td></tr>

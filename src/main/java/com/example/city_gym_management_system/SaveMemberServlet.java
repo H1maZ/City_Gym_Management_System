@@ -34,6 +34,7 @@ public class SaveMemberServlet extends HttpServlet {
         // 🔥 FORM DATA
         // ======================
         String name = request.getParameter("name");
+        String admissionNo = request.getParameter("admissionNo");
         String phone = request.getParameter("phone");
         String gender = request.getParameter("gender");
         String whatsapp = request.getParameter("whatsapp");
@@ -91,23 +92,24 @@ public class SaveMemberServlet extends HttpServlet {
             // 🔥 INSERT MEMBER
             // ======================
             String q1 = "INSERT INTO member_details " +
-                    "(fingerprint_id, full_name, phone, gender, age, whatsapp, address, photo) " +
-                    "VALUES (?,?,?,?,?,?,?,?)";
+                    "(fingerprint_id,admission_no, full_name, phone, gender, age, whatsapp, address, photo) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?)";
 
             ps1 = con.prepareStatement(q1, Statement.RETURN_GENERATED_KEYS);
 
             ps1.setString(1, fid);
-            ps1.setString(2, name);
-            ps1.setString(3, phone);
-            ps1.setString(4, gender);
-            ps1.setInt(5, age);
-            ps1.setString(6, whatsapp);
-            ps1.setString(7, address);
+            ps1.setString(2, admissionNo);
+            ps1.setString(3, name);
+            ps1.setString(4, phone);
+            ps1.setString(5, gender);
+            ps1.setInt(6, age);
+            ps1.setString(7, whatsapp);
+            ps1.setString(8, address);
 
             if (photoStream != null) {
-                ps1.setBlob(8, photoStream);
+                ps1.setBlob(9, photoStream);
             } else {
-                ps1.setNull(8, Types.BLOB);
+                ps1.setNull(9, Types.BLOB);
             }
 
             ps1.executeUpdate();

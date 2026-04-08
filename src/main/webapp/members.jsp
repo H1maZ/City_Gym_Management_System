@@ -142,6 +142,7 @@
     <h3>Member Details</h3>
 
     Name: <input type="text" name="name" required><br>
+    Admission No: <input type="text" name="admissionNo" required><br>
     Phone: <input type="text" name="phone"><br>
     Gender: <input type="text" name="gender"><br>
     Age: <input type="number" name="age"><br>

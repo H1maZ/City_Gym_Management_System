@@ -60,6 +60,7 @@ public class ViewMemberServlet extends HttpServlet {
             }
         }
 
+        String admissionNo = "";
         String name = "";
         String phone = "";
         String gender = "";
@@ -93,6 +94,7 @@ public class ViewMemberServlet extends HttpServlet {
             if (rs.next()) {
 
                 name = rs.getString("full_name");
+                admissionNo = rs.getString("admission_no");
                 phone = rs.getString("phone");
                 gender = rs.getString("gender");
                 age = rs.getInt("age");
@@ -117,6 +119,7 @@ public class ViewMemberServlet extends HttpServlet {
 
         request.setAttribute("fid", fid);
         request.setAttribute("name", name);
+        request.setAttribute("admissionNo", admissionNo);
         request.setAttribute("phone", phone);
         request.setAttribute("gender", gender);
         request.setAttribute("age", age);
@@ -206,6 +209,7 @@ public class ViewMemberServlet extends HttpServlet {
                     hasNewPhoto = true;
                 }
 
+                String admissionNo = request.getParameter("admissionNo");
                 String name = request.getParameter("name");
                 String phone = request.getParameter("phone");
                 String gender = request.getParameter("gender");
@@ -224,25 +228,26 @@ public class ViewMemberServlet extends HttpServlet {
                 String q1;
 
                 if (hasNewPhoto) {
-                    q1 = "UPDATE member_details SET full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=?, photo=? WHERE fingerprint_id=?";
+                    q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=?, photo=? WHERE fingerprint_id=?";
                 } else {
-                    q1 = "UPDATE member_details SET full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=? WHERE fingerprint_id=?";
+                    q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=? WHERE fingerprint_id=?";
                 }
 
                 PreparedStatement ps1 = con.prepareStatement(q1);
 
-                ps1.setString(1, name);
-                ps1.setString(2, phone);
-                ps1.setString(3, gender);
-                ps1.setInt(4, age);
-                ps1.setString(5, whatsapp);
-                ps1.setString(6, address);
+                ps1.setString(1, admissionNo); // 🔥 FIX
+                ps1.setString(2, name);
+                ps1.setString(3, phone);
+                ps1.setString(4, gender);
+                ps1.setInt(5, age);
+                ps1.setString(6, whatsapp);
+                ps1.setString(7, address);
 
                 if (hasNewPhoto) {
-                    ps1.setBlob(7, photoStream);
-                    ps1.setString(8, fid);
+                    ps1.setBlob(8, photoStream);
+                    ps1.setString(9, fid);
                 } else {
-                    ps1.setString(7, fid);
+                    ps1.setString(8, fid);
                 }
 
                 ps1.executeUpdate();
