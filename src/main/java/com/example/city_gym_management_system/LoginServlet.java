@@ -17,14 +17,14 @@ public class LoginServlet extends HttpServlet {
         String role = request.getParameter("role");
 
         // Admin check
-        if (role.equals("admin") && username.equals("addmin") && password.equals("123")) {
+        if (role.equals("admin") && username.equals("admin") && password.equals("12345")) {
 
             request.getSession().setAttribute("userRole", "admin");
             response.sendRedirect("admin_dashboard.jsp");
 
         }
         // Staff check
-        else if (role.equals("staff") && username.equals("staff") && password.equals("123")) {
+        else if (role.equals("staff") && username.equals("s") && password.equals("1")) {
 
             request.getSession().setAttribute("userRole", "staff");
             response.sendRedirect("staff_dashboard.jsp");
