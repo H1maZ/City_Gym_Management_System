@@ -25,9 +25,15 @@
         <tr><td>Start Date</td><td>${startDate}</td></tr>
         <tr><td>End Date</td><td>${endDate}</td></tr>
 
-        <!-- 🔥 NEW -->
         <tr><td>Amount</td><td>${amount}</td></tr>
         <tr><td>Registration Fee</td><td>${regFee}</td></tr>
+
+        <tr>
+            <td>Days Remaining</td>
+            <td>
+                <span id="daysLeft"></span>
+            </td>
+        </tr>
 
     </table>
 
@@ -130,4 +136,33 @@
         document.querySelector('[name="endDate"]').value =
             end.toISOString().split("T")[0];
     }
+</script>
+
+<script>
+    window.onload = function(){
+
+        let endDateStr = "${endDate}";
+        if(!endDateStr) return;
+
+        let today = new Date();
+        let endDate = new Date(endDateStr);
+
+        let diffTime = endDate - today;
+        let days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let el = document.getElementById("daysLeft");
+
+        if(days < 0){
+            el.innerHTML = "Expired";
+            el.style.color = "red";
+        } else {
+            el.innerHTML = days + " days";
+
+            if(days <= 7){
+                el.style.color = "red"; // 🔴 warning
+            } else {
+                el.style.color = "green"; // 🟢 normal
+            }
+        }
+    };
 </script>
