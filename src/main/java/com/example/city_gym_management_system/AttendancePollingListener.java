@@ -16,6 +16,8 @@ public class AttendancePollingListener implements ServletContextListener {
     private Thread pollingThread;
     private volatile boolean running = false;
 
+    private String lastCleanDate = "";
+
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         running = true;
@@ -35,8 +37,9 @@ public class AttendancePollingListener implements ServletContextListener {
                 } catch (Exception e) {
                     System.out.println("❌ Poll error: " + e.getMessage());
                 }
+
                 try {
-                    Thread.sleep(10000); // 10s
+                    Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -45,7 +48,6 @@ public class AttendancePollingListener implements ServletContextListener {
         });
 
         pollingThread.setDaemon(true);
-        pollingThread.setName("ZK-Poller");
         pollingThread.start();
     }
 
@@ -56,6 +58,7 @@ public class AttendancePollingListener implements ServletContextListener {
     }
 
     private void pollDevice() {
+
         ActiveXComponent zk = null;
         Connection con = null;
 
@@ -65,39 +68,58 @@ public class AttendancePollingListener implements ServletContextListener {
                     "jdbc:mysql://localhost:3306/gym_system", "root", "1234");
 
             zk = new ActiveXComponent("zkemkeeper.ZKEM");
+
             boolean connected = zk.invoke("Connect_Net",
                     new Variant("192.168.8.201"),
                     new Variant(4370)).getBoolean();
 
             if (!connected) {
-                System.out.println("⚠️ Poller: Device unreachable");
+                System.out.println("⚠️ Device not connected");
                 return;
             }
 
-            // Users read (fallback name lookup)
-            Map<String, String> deviceUsers = new HashMap<>();
-            zk.invoke("ReadAllUserID", new Variant(1));
-            Variant uid = new Variant("", true), uname = new Variant("", true),
-                    upwd = new Variant("", true), upriv = new Variant(0, true),
-                    uena = new Variant(false, true);
-            while (true) {
-                Variant r = zk.invoke("SSR_GetAllUserInfo",
-                        new Variant(1), uid, uname, upwd, upriv, uena);
-                if (!r.getBoolean()) break;
-                deviceUsers.put(uid.toString().trim(), uname.toString().trim());
-            }
+            // 🔥 ================= MIDNIGHT RESET =================
+            try {
+                java.time.LocalDate today = java.time.LocalDate.now();
+                java.time.LocalTime now = java.time.LocalTime.now();
 
-            // Logs read
+                if (now.getHour() == 0 && now.getMinute() < 5) {
+
+                    String todayStr = today.toString();
+
+                    if (!todayStr.equals(lastCleanDate)) {
+
+                        // 🔥 1. CLEAR DEVICE LOGS
+                        zk.invoke("ClearGLog", new Variant(1));
+                        System.out.println("🧹 Device logs cleared");
+
+                        // 🔥 2. CLEAR DATABASE LOGS
+                        String deleteSql = "DELETE FROM attendance_log";
+                        PreparedStatement dps = con.prepareStatement(deleteSql);
+                        int count = dps.executeUpdate();
+                        dps.close();
+
+                        System.out.println("🧹 DB logs cleared: " + count);
+
+                        lastCleanDate = todayStr;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            // 🔥 ==================================================
+
+            // 🔥 READ LOGS AFTER CLEAN
             zk.invoke("ReadGeneralLogData", new Variant(1));
 
-            // 🔥 INSERT IGNORE — duplicate skip, inserted_at = NOW() (server time)
             String insertSql =
                     "INSERT IGNORE INTO attendance_log (fingerprint_id, scan_time) " +
-                            "SELECT ?, ? FROM member_details " +
-                            "WHERE fingerprint_id = ? LIMIT 1";
+                            "SELECT ?, ? FROM member_details WHERE fingerprint_id = ? LIMIT 1";
+
             PreparedStatement ps = con.prepareStatement(insertSql);
 
             while (true) {
+
                 Variant userID = new Variant("", true), vm = new Variant(0, true),
                         io = new Variant(0, true),
                         yr = new Variant(0, true), mo = new Variant(0, true),
@@ -107,25 +129,31 @@ public class AttendancePollingListener implements ServletContextListener {
 
                 Variant res = zk.invoke("SSR_GetGeneralLogData",
                         new Variant(1), userID, vm, io, yr, mo, dy, hr, mn, sc, wc);
+
                 if (!res.getBoolean()) break;
 
-                String fid  = userID.toString().trim();
+                String fid = userID.toString().trim();
+
+                if (fid == null || fid.isEmpty() || fid.equals("0")) continue;
+
                 String date = String.format("%04d-%02d-%02d",
                         si(yr), si(mo), si(dy));
+
                 String time = String.format("%02d:%02d:%02d",
                         si(hr), si(mn), si(sc));
 
                 ps.setString(1, fid);
                 ps.setString(2, date + " " + time);
-                ps.setString(3, fid);  // 🔥 WHERE clause එකට
-                ps.executeUpdate(); // INSERT IGNORE — new rows get inserted_at = NOW()
+                ps.setString(3, fid);
+
+                ps.executeUpdate();
             }
 
             ps.close();
             zk.invoke("Disconnect");
 
         } catch (Exception e) {
-            System.out.println("❌ Poll exception: " + e.getMessage());
+            System.out.println("❌ Poll error: " + e.getMessage());
         } finally {
             try { if (con != null) con.close(); } catch (Exception ignored) {}
         }
