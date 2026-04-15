@@ -14,7 +14,7 @@
 <body>
 
 <div class="content">
-  <h2>Page 1</h2>
+  <h2>Membership and Payment</h2>
   <p>Welcome</p>
 </div>
 <script src="attendance-popup.js"></script>

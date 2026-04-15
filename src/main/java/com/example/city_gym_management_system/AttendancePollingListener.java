@@ -93,7 +93,8 @@ public class AttendancePollingListener implements ServletContextListener {
             // 🔥 INSERT IGNORE — duplicate skip, inserted_at = NOW() (server time)
             String insertSql =
                     "INSERT IGNORE INTO attendance_log (fingerprint_id, scan_time) " +
-                            "VALUES (?, ?)";
+                            "SELECT ?, ? FROM member_details " +
+                            "WHERE fingerprint_id = ? LIMIT 1";
             PreparedStatement ps = con.prepareStatement(insertSql);
 
             while (true) {
@@ -116,6 +117,7 @@ public class AttendancePollingListener implements ServletContextListener {
 
                 ps.setString(1, fid);
                 ps.setString(2, date + " " + time);
+                ps.setString(3, fid);  // 🔥 WHERE clause එකට
                 ps.executeUpdate(); // INSERT IGNORE — new rows get inserted_at = NOW()
             }
 

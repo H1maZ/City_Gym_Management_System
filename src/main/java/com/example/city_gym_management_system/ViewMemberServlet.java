@@ -157,36 +157,44 @@ public class ViewMemberServlet extends HttpServlet {
             // ======================
             if ("delete".equals(action)) {
 
+                // ZK device delete (existing code)
                 try {
                     ActiveXComponent zk = new ActiveXComponent("zkemkeeper.ZKEM");
-
                     boolean isConnected = zk.invoke("Connect_Net",
                             new Variant("192.168.8.201"),
                             new Variant(4370)).getBoolean();
-
                     if (isConnected) {
-
                         zk.invoke("SSR_DeleteEnrollData", new Variant(1), new Variant(fid), new Variant(12));
                         zk.invoke("DeleteUserInfo", new Variant(1), new Variant(fid));
                         zk.invoke("RefreshData", new Variant(1));
                         zk.invoke("Disconnect");
                     }
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
+                // 🔥 1. Delete attendance_log FIRST (fingerprint_id direct)
+                String q0 = "DELETE FROM attendance_log WHERE fingerprint_id=?";
+                PreparedStatement ps0 = con.prepareStatement(q0);
+                ps0.setString(1, fid);
+                ps0.executeUpdate();
+                ps0.close();
+
+                // 2. Delete membership_details
                 String q1 = "DELETE ms FROM membership_details ms " +
                         "JOIN member_details md ON ms.member_id=md.id " +
                         "WHERE md.fingerprint_id=?";
                 PreparedStatement ps1 = con.prepareStatement(q1);
                 ps1.setString(1, fid);
                 ps1.executeUpdate();
+                ps1.close();
 
+                // 3. Delete member_details
                 String q2 = "DELETE FROM member_details WHERE fingerprint_id=?";
                 PreparedStatement ps2 = con.prepareStatement(q2);
                 ps2.setString(1, fid);
                 ps2.executeUpdate();
+                ps2.close();
 
                 response.sendRedirect("fingerprint-data?page=users");
                 return;

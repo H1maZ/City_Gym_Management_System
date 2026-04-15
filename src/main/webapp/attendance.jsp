@@ -120,6 +120,17 @@
             continue;
         }
 
+        // 🔥 FIX: Deleted member (unknown) rows skip කරනවා
+        String logName      = log.get("name");
+        String logAdmission = log.get("admission");
+
+        if (logName == null || logName.trim().isEmpty()
+                || "Unknown".equalsIgnoreCase(logName.trim())
+                || logAdmission == null || logAdmission.trim().isEmpty()
+                || "-".equals(logAdmission.trim())) {
+            continue; // 🔥 show කරන්නේ නෑ
+        }
+
         String daysLeft = log.get("daysLeft");
         String cssClass = "active";
 
@@ -134,8 +145,8 @@
     %>
     <tr>
         <td><%= i++ %></td>
-        <td><%= log.get("admission") %></td>
-        <td><%= log.get("name") %></td>
+        <td><%= logAdmission %></td>
+        <td><%= logName %></td>
         <td><%= log.get("date") %></td>
         <td><%= log.get("time") %></td>
         <td class="<%= cssClass %>"><%= daysLeft %></td>
@@ -158,7 +169,9 @@
                 let doc = parser.parseFromString(html, 'text/html');
 
                 let newTable = doc.querySelector("#attendanceTable");
-                document.querySelector("#attendanceTable").innerHTML = newTable.innerHTML;
+                if (newTable) {
+                    document.querySelector("#attendanceTable").innerHTML = newTable.innerHTML;
+                }
             });
     }
 

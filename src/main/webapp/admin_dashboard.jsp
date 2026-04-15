@@ -92,7 +92,7 @@
     <a href="home.jsp" target="contentFrame" onclick="setActive(this)" class="active">Home</a>
     <a href="fingerprint-data" target="contentFrame" onclick="setActive(this)">Members</a>
     <a href="attendance.jsp" target="contentFrame" onclick="setActive(this)">Members Attendance</a>
-    <a href="page1.jsp" target="contentFrame" onclick="setActive(this)">Page 1</a>
+    <a href="member_payment.jsp" target="contentFrame" onclick="setActive(this)">Membership & Payment</a>
     <a href="page2.jsp" target="contentFrame" onclick="setActive(this)">Page 2</a>
 
     <div class="logout">
