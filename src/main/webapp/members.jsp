@@ -69,6 +69,7 @@
     <th>ID</th>
     <th>Name</th>
     <th>Phone</th>
+    <th>WhatsApp</th>
     <th>Package</th>
     <th>Start</th>
     <th>End</th>
@@ -85,7 +86,7 @@
               "1234"
       );
 
-      String sql = "SELECT md.fingerprint_id, md.full_name, md.phone, " +
+      String sql = "SELECT md.id AS member_id, md.fingerprint_id, md.full_name, md.phone, md.whatsapp, " +
               "ms.months, ms.start_date, ms.end_date " +
               "FROM member_details md " +
               "LEFT JOIN membership_details ms ON md.id = ms.member_id";
@@ -100,6 +101,7 @@
     <td><%=rs.getString("fingerprint_id")%></td>
     <td><%=rs.getString("full_name")%></td>
     <td><%=rs.getString("phone")%></td>
+    <td><%= rs.getString("whatsapp") != null ? rs.getString("whatsapp") : "-" %></td>
 
     <td>
       <%= rs.getObject("months") != null ? rs.getInt("months") + " Months" : "N/A" %>
@@ -109,6 +111,8 @@
     <td><%= rs.getString("end_date") != null ? rs.getString("end_date") : "-" %></td>
 
     <td>
+      <a href="member-payment?memberId=<%=rs.getInt("member_id")%>" target="contentFrame">💳 Payment</a>
+      |
       <form action="view-member" method="get">
         <input type="hidden" name="fid" value="<%=rs.getString("fingerprint_id")%>">
         <button type="submit">👁 View</button>
@@ -147,6 +151,7 @@
     Gender: <input type="text" name="gender"><br>
     Age: <input type="number" name="age"><br>
     WhatsApp: <input type="text" name="whatsapp"><br>
+    Birthday: <input type="date" name="birthdayDate"><br>
     Address: <input type="text" name="address"><br>
 
     <!-- 🔥 PHOTO -->

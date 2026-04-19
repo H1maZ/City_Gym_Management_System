@@ -31,11 +31,7 @@ public class ViewMemberServlet extends HttpServlet {
         if ("image".equals(request.getParameter("type"))) {
 
             try {
-                Connection con = DriverManager.getConnection(
-                        "jdbc:mysql://localhost:3306/gym_system",
-                        "root",
-                        "1234"
-                );
+                Connection con = DatabaseUtil.getConnection();
 
                 String sql = "SELECT photo FROM member_details WHERE fingerprint_id=?";
                 PreparedStatement ps = con.prepareStatement(sql);
@@ -56,7 +52,7 @@ public class ViewMemberServlet extends HttpServlet {
                 return; // 🔥 VERY IMPORTANT
 
             } catch (Exception e) {
-                e.printStackTrace();
+                System.err.println("[VIEW MEMBER ERROR] Image load failed: " + e.getMessage());
             }
         }
 
@@ -65,7 +61,9 @@ public class ViewMemberServlet extends HttpServlet {
         String phone = "";
         String gender = "";
         int age = 0;
+        int memberId = 0;
         String whatsapp = "";
+        String birthdayDate = "";
         String address = "";
         int months = 0;
         String startDate = "";
@@ -74,13 +72,9 @@ public class ViewMemberServlet extends HttpServlet {
         double regFee = 0;
 
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection con = DatabaseUtil.getConnection();
 
-            Connection con = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/gym_system",
-                    "root",
-                    "1234"
-            );
+            boolean hasBirthdayColumn = hasColumn(con, "member_details", "birthday_date");
 
             String sql = "SELECT * FROM member_details md " +
                     "LEFT JOIN membership_details ms ON md.id = ms.member_id " +
@@ -93,12 +87,16 @@ public class ViewMemberServlet extends HttpServlet {
 
             if (rs.next()) {
 
+                memberId = rs.getInt("id");
                 name = rs.getString("full_name");
                 admissionNo = rs.getString("admission_no");
                 phone = rs.getString("phone");
                 gender = rs.getString("gender");
                 age = rs.getInt("age");
                 whatsapp = rs.getString("whatsapp");
+                if (hasBirthdayColumn) {
+                    birthdayDate = rs.getString("birthday_date");
+                }
                 address = rs.getString("address");
 
                 months = rs.getInt("months");
@@ -114,16 +112,18 @@ public class ViewMemberServlet extends HttpServlet {
             con.close();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("[VIEW MEMBER ERROR] Load failed: " + e.getMessage());
         }
 
         request.setAttribute("fid", fid);
+        request.setAttribute("memberId", memberId);
         request.setAttribute("name", name);
         request.setAttribute("admissionNo", admissionNo);
         request.setAttribute("phone", phone);
         request.setAttribute("gender", gender);
         request.setAttribute("age", age);
         request.setAttribute("whatsapp", whatsapp);
+        request.setAttribute("birthdayDate", birthdayDate);
         request.setAttribute("address", address);
         request.setAttribute("months", months);
         request.setAttribute("startDate", startDate);
@@ -138,19 +138,15 @@ public class ViewMemberServlet extends HttpServlet {
     // 🔥 UPDATE + DELETE
     // ======================
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
+            throws ServletException {
 
         String action = request.getParameter("action");
         String fid = request.getParameter("fid");
 
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection con = DatabaseUtil.getConnection();
 
-            Connection con = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/gym_system",
-                    "root",
-                    "1234"
-            );
+            boolean hasBirthdayColumn = hasColumn(con, "member_details", "birthday_date");
 
             // ======================
             // 🔥 DELETE (DEVICE + DB)
@@ -170,7 +166,7 @@ public class ViewMemberServlet extends HttpServlet {
                         zk.invoke("Disconnect");
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    System.err.println("[VIEW MEMBER ERROR] Device delete failed: " + e.getMessage());
                 }
 
                 // 🔥 1. Delete attendance_log FIRST (fingerprint_id direct)
@@ -223,6 +219,7 @@ public class ViewMemberServlet extends HttpServlet {
                 String gender = request.getParameter("gender");
                 int age = Integer.parseInt(request.getParameter("age"));
                 String whatsapp = request.getParameter("whatsapp");
+                String birthdayDate = request.getParameter("birthdayDate");
                 String address = request.getParameter("address");
 
                 int months = Integer.parseInt(request.getParameter("months"));
@@ -235,10 +232,18 @@ public class ViewMemberServlet extends HttpServlet {
                 // 🔥 update member
                 String q1;
 
-                if (hasNewPhoto) {
-                    q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=?, photo=? WHERE fingerprint_id=?";
+                if (hasBirthdayColumn) {
+                    if (hasNewPhoto) {
+                        q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, birthday_date=?, address=?, photo=? WHERE fingerprint_id=?";
+                    } else {
+                        q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, birthday_date=?, address=? WHERE fingerprint_id=?";
+                    }
                 } else {
-                    q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=? WHERE fingerprint_id=?";
+                    if (hasNewPhoto) {
+                        q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=?, photo=? WHERE fingerprint_id=?";
+                    } else {
+                        q1 = "UPDATE member_details SET admission_no=?, full_name=?, phone=?, gender=?, age=?, whatsapp=?, address=? WHERE fingerprint_id=?";
+                    }
                 }
 
                 PreparedStatement ps1 = con.prepareStatement(q1);
@@ -249,13 +254,23 @@ public class ViewMemberServlet extends HttpServlet {
                 ps1.setString(4, gender);
                 ps1.setInt(5, age);
                 ps1.setString(6, whatsapp);
-                ps1.setString(7, address);
-
-                if (hasNewPhoto) {
-                    ps1.setBlob(8, photoStream);
-                    ps1.setString(9, fid);
+                if (hasBirthdayColumn) {
+                    ps1.setString(7, birthdayDate);
+                    ps1.setString(8, address);
+                    if (hasNewPhoto) {
+                        ps1.setBlob(9, photoStream);
+                        ps1.setString(10, fid);
+                    } else {
+                        ps1.setString(9, fid);
+                    }
                 } else {
-                    ps1.setString(8, fid);
+                    ps1.setString(7, address);
+                    if (hasNewPhoto) {
+                        ps1.setBlob(8, photoStream);
+                        ps1.setString(9, fid);
+                    } else {
+                        ps1.setString(8, fid);
+                    }
                 }
 
                 ps1.executeUpdate();
@@ -281,7 +296,14 @@ public class ViewMemberServlet extends HttpServlet {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("[VIEW MEMBER ERROR] Update/delete failed: " + e.getMessage());
+        }
+    }
+
+    private boolean hasColumn(Connection con, String tableName, String columnName) throws SQLException {
+        DatabaseMetaData metaData = con.getMetaData();
+        try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, tableName, columnName)) {
+            return columns.next();
         }
     }
 }

@@ -24,7 +24,12 @@ public class BirthdayCheckService {
             String month = String.format("%02d", today.getMonthValue());
             String day = String.format("%02d", today.getDayOfMonth());
 
-            String query = "SELECT full_name, whatsapp FROM member_details WHERE DATE_FORMAT(created_at, '%m-%d') = ?";
+            if (!hasBirthdayDateColumn(con)) {
+                System.out.println("[BIRTHDAY SERVICE] Skipping: member_details.birthday_date column is missing");
+                return;
+            }
+
+            String query = "SELECT full_name, whatsapp FROM member_details WHERE DATE_FORMAT(birthday_date, '%m-%d') = ?";
             String datePattern = month + "-" + day;
 
             try (PreparedStatement ps = con.prepareStatement(query)) {
@@ -41,6 +46,13 @@ public class BirthdayCheckService {
             }
         } catch (Exception e) {
             System.err.println("[BIRTHDAY ERROR] " + e.getMessage());
+        }
+    }
+
+    private static boolean hasBirthdayDateColumn(Connection con) throws SQLException {
+        DatabaseMetaData metaData = con.getMetaData();
+        try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, "member_details", "birthday_date")) {
+            return columns.next();
         }
     }
 

@@ -13,9 +13,9 @@ import java.sql.SQLException;
 public class DatabaseUtil {
     
     // Database configuration
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/gym_system";
-    private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "1234";
+    private static final String DB_URL = getEnvOrDefault("DB_URL", "jdbc:mysql://localhost:3306/gym_system");
+    private static final String DB_USER = getEnvOrDefault("DB_USER", "root");
+    private static final String DB_PASSWORD = getEnvOrDefault("DB_PASSWORD", "1234");
     private static final String DB_DRIVER = "com.mysql.cj.jdbc.Driver";
     
     // Connection timeout (10 seconds)
@@ -68,6 +68,11 @@ public class DatabaseUtil {
                 System.err.println("[DB WARNING] Error closing resource: " + e.getMessage());
             }
         }
+    }
+
+    private static String getEnvOrDefault(String key, String defaultValue) {
+        String value = System.getenv(key);
+        return value == null || value.isBlank() ? defaultValue : value.trim();
     }
 }
 
