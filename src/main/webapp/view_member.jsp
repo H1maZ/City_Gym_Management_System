@@ -7,7 +7,7 @@
 
     <!-- 🔥 PROFILE PHOTO -->
     <div style="margin-bottom:15px;">
-        <img src="view-member?fid=${fid}&type=image" width="120" style="border-radius:10px;">
+        <img src="view-member?fid=${fid}&type=image" width="120" alt="Member photo" style="border-radius:10px;">
     </div>
 
     <table border="1" cellpadding="10">
@@ -19,6 +19,7 @@
         <tr><td>Gender</td><td>${gender}</td></tr>
         <tr><td>Age</td><td>${age}</td></tr>
         <tr><td>WhatsApp</td><td>${whatsapp}</td></tr>
+        <tr><td>Birthday</td><td>${birthdayDate}</td></tr>
         <tr><td>Address</td><td>${address}</td></tr>
 
         <tr><td>Package</td><td>${months} Months</td></tr>
@@ -41,6 +42,8 @@
 
     <!-- 🔥 ACTION BUTTONS -->
     <button onclick="showEdit()">✏️ Update</button>
+
+    <a href="member-payment?memberId=${memberId}" style="display:inline-block; padding:6px 10px; border:1px solid #333; text-decoration:none; margin-left:6px; background:#0a7; color:#fff; border-radius:4px;">💳 Record Payment</a>
 
     <form action="view-member" method="post" style="display:inline;">
         <input type="hidden" name="action" value="delete">
@@ -75,6 +78,7 @@
             <tr><td>Gender</td><td><input type="text" name="gender" value="${gender}"></td></tr>
             <tr><td>Age</td><td><input type="number" name="age" value="${age}" required></td></tr>
             <tr><td>WhatsApp</td><td><input type="text" name="whatsapp" value="${whatsapp}"></td></tr>
+            <tr><td>Birthday</td><td><input type="date" name="birthdayDate" value="${birthdayDate}"></td></tr>
             <tr><td>Address</td><td><input type="text" name="address" value="${address}"></td></tr>
 
             <!-- 🔥 PACKAGE -->

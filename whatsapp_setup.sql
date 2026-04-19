@@ -1,8 +1,41 @@
 -- City Gym WhatsApp Integration Database Updates
--- Run this script to ensure all required columns exist
+-- Run this script on the existing gym_system database
 
--- Step 1: Add whatsapp column to member_details if it doesn't exist
-ALTER TABLE member_details ADD COLUMN IF NOT EXISTS whatsapp varchar(20);
+USE gym_system;
+
+-- Step 1: Add whatsapp column only if it does not already exist
+SET @has_whatsapp := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'member_details'
+    AND COLUMN_NAME = 'whatsapp'
+);
+SET @sql := IF(
+  @has_whatsapp = 0,
+  'ALTER TABLE member_details ADD COLUMN whatsapp VARCHAR(20)',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Step 1b: Add birthday column only if it does not already exist
+SET @has_birthday := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'member_details'
+    AND COLUMN_NAME = 'birthday_date'
+);
+SET @sql := IF(
+  @has_birthday = 0,
+  'ALTER TABLE member_details ADD COLUMN birthday_date DATE',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Step 2: Add payment tracking table
 CREATE TABLE IF NOT EXISTS payment_history (
@@ -15,7 +48,7 @@ CREATE TABLE IF NOT EXISTS payment_history (
   PRIMARY KEY (id),
   KEY member_id (member_id),
   CONSTRAINT payment_history_ibfk_1 FOREIGN KEY (member_id) REFERENCES member_details (id) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Step 3: Add notification tracking
 CREATE TABLE IF NOT EXISTS whatsapp_notifications (
@@ -28,18 +61,46 @@ CREATE TABLE IF NOT EXISTS whatsapp_notifications (
   PRIMARY KEY (id),
   KEY member_id (member_id),
   CONSTRAINT notif_ibfk_1 FOREIGN KEY (member_id) REFERENCES member_details (id) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Step 4: Ensure membership_details has all columns
+-- Step 4: Ensure membership_details has the expected default status
 ALTER TABLE membership_details MODIFY COLUMN status VARCHAR(20) DEFAULT 'ACTIVE';
 
--- Step 5: Create index for faster queries
-CREATE INDEX IF NOT EXISTS idx_membership_end_date ON membership_details(end_date);
-CREATE INDEX IF NOT EXISTS idx_membership_status ON membership_details(status);
+-- Step 5: Create indexes only if they do not already exist
+SET @idx_end_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'membership_details'
+    AND INDEX_NAME = 'idx_membership_end_date'
+);
+SET @sql := IF(
+  @idx_end_exists = 0,
+  'CREATE INDEX idx_membership_end_date ON membership_details(end_date)',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx_status_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'membership_details'
+    AND INDEX_NAME = 'idx_membership_status'
+);
+SET @sql := IF(
+  @idx_status_exists = 0,
+  'CREATE INDEX idx_membership_status ON membership_details(status)',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Verification queries
-SELECT 'Tables Created Successfully' as status;
+SELECT 'Tables Created Successfully' AS status;
 SHOW TABLES LIKE 'payment_history';
 SHOW TABLES LIKE 'whatsapp_notifications';
 DESCRIBE member_details;
-

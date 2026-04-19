@@ -38,6 +38,7 @@ public class SaveMemberServlet extends HttpServlet {
         String phone = request.getParameter("phone");
         String gender = request.getParameter("gender");
         String whatsapp = request.getParameter("whatsapp");
+        String birthdayDate = request.getParameter("birthdayDate");
         String address = request.getParameter("address");
 
         int age = Integer.parseInt(request.getParameter("age"));
@@ -64,15 +65,13 @@ public class SaveMemberServlet extends HttpServlet {
         PreparedStatement ps1 = null;
         PreparedStatement ps2 = null;
         ResultSet rs = null;
+        ResultSet keyRs = null;
 
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            con = DatabaseUtil.getConnection();
+            con.setAutoCommit(false);
 
-            con = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/gym_system",
-                    "root",
-                    "1234"
-            );
+            boolean hasBirthdayColumn = hasColumn(con, "member_details", "birthday_date");
 
             // ======================
             // 🔥 DUPLICATE CHECK
@@ -91,7 +90,11 @@ public class SaveMemberServlet extends HttpServlet {
             // ======================
             // 🔥 INSERT MEMBER
             // ======================
-            String q1 = "INSERT INTO member_details " +
+            String q1 = hasBirthdayColumn
+                    ? "INSERT INTO member_details " +
+                    "(fingerprint_id,admission_no, full_name, phone, gender, age, whatsapp, birthday_date, address, photo) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?)"
+                    : "INSERT INTO member_details " +
                     "(fingerprint_id,admission_no, full_name, phone, gender, age, whatsapp, address, photo) " +
                     "VALUES (?,?,?,?,?,?,?,?,?)";
 
@@ -104,19 +107,27 @@ public class SaveMemberServlet extends HttpServlet {
             ps1.setString(5, gender);
             ps1.setInt(6, age);
             ps1.setString(7, whatsapp);
-            ps1.setString(8, address);
-
-            if (photoStream != null) {
-                ps1.setBlob(9, photoStream);
+            if (hasBirthdayColumn) {
+                ps1.setString(8, birthdayDate != null && !birthdayDate.isBlank() ? birthdayDate : null);
+                ps1.setString(9, address);
+                if (photoStream != null) {
+                    ps1.setBlob(10, photoStream);
+                } else {
+                    ps1.setNull(10, Types.BLOB);
+                }
             } else {
-                ps1.setNull(9, Types.BLOB);
+                ps1.setString(8, address);
+                if (photoStream != null) {
+                    ps1.setBlob(9, photoStream);
+                } else {
+                    ps1.setNull(9, Types.BLOB);
+                }
             }
 
             ps1.executeUpdate();
 
-            ResultSet keyRs = ps1.getGeneratedKeys();
             int memberId = 0;
-
+            keyRs = ps1.getGeneratedKeys();
             if (keyRs.next()) {
                 memberId = keyRs.getInt(1);
             }
@@ -143,16 +154,54 @@ public class SaveMemberServlet extends HttpServlet {
 
             ps2.executeUpdate();
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            con.commit();
+
+            if (whatsapp != null && !whatsapp.isBlank()) {
+                WhatsAppService.sendMessage(
+                        whatsapp,
+                        String.format(
+                                "Welcome to City Gym, %s! Your membership record has been created successfully. Stay fit and keep going!",
+                                name)
+                );
+            }
+        } catch (SQLException e) {
+            System.err.println("[SAVE MEMBER ERROR] " + e.getMessage());
+            if (con != null) {
+                try {
+                    con.rollback();
+                } catch (SQLException rollbackError) {
+                    System.err.println("[SAVE MEMBER ERROR] Rollback failed: " + rollbackError.getMessage());
+                }
+            }
         } finally {
-            try { if (rs != null) rs.close(); } catch (Exception e) {}
-            try { if (psCheck != null) psCheck.close(); } catch (Exception e) {}
-            try { if (ps1 != null) ps1.close(); } catch (Exception e) {}
-            try { if (ps2 != null) ps2.close(); } catch (Exception e) {}
-            try { if (con != null) con.close(); } catch (Exception e) {}
+            closeQuietly(rs);
+            closeQuietly(psCheck);
+            closeQuietly(ps1);
+            closeQuietly(ps2);
+            closeQuietly(keyRs);
+            closeQuietly(photoStream);
+            closeQuietly(con);
         }
 
         response.sendRedirect("fingerprint-data?page=users");
+    }
+
+    private boolean hasColumn(Connection con, String tableName, String columnName) throws SQLException {
+        DatabaseMetaData metaData = con.getMetaData();
+        try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, tableName, columnName)) {
+            return columns.next();
+        }
+    }
+
+    private void closeQuietly(AutoCloseable resource) {
+        if (resource == null) {
+            return;
+        }
+
+        try {
+            resource.close();
+        } catch (Exception e) {
+            System.err.println("[SAVE MEMBER WARNING] Error closing resource: " + e.getMessage());
+        }
     }
 }

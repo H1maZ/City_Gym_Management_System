@@ -20,6 +20,7 @@ public class WhatsAppService {
 
     // Twilio WhatsApp Sandbox number (provided by Twilio)
     private static final String TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886";
+    private static volatile boolean twilioReady = false;
     
     // Initialize Twilio with credentials from environment variables
     static {
@@ -33,6 +34,7 @@ public class WhatsAppService {
                 System.err.println("[WHATSAPP ERROR] Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN");
             } else {
                 Twilio.init(accountSid, authToken);
+                twilioReady = true;
                 System.out.println("[WHATSAPP] Twilio initialized successfully");
             }
         } catch (Exception e) {
@@ -49,6 +51,11 @@ public class WhatsAppService {
      */
     public static boolean sendMessage(String phoneNumber, String messageText) {
         try {
+            if (!twilioReady) {
+                System.err.println("[WHATSAPP ERROR] Twilio is not initialized. Check environment variables.");
+                return false;
+            }
+
             // ✅ Validate inputs
             if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
                 System.err.println("[WHATSAPP ERROR] Phone number is null or empty");
@@ -60,18 +67,11 @@ public class WhatsAppService {
                 return false;
             }
 
-            // ✅ Ensure phone number has WhatsApp prefix
-            String formattedPhone = phoneNumber.trim();
-            if (!formattedPhone.startsWith("whatsapp:")) {
-                // Add whatsapp: prefix if not present
-                if (formattedPhone.startsWith("+")) {
-                    formattedPhone = "whatsapp:" + formattedPhone;
-                } else if (formattedPhone.startsWith("92")) {
-                    // Handle Pakistan number without +
-                    formattedPhone = "whatsapp:+" + formattedPhone;
-                } else {
-                    formattedPhone = "whatsapp:+" + formattedPhone;
-                }
+            // ✅ Ensure phone number is clean and formatted for WhatsApp
+            String formattedPhone = normalizeWhatsAppNumber(phoneNumber);
+            if (formattedPhone == null) {
+                System.err.println("[WHATSAPP ERROR] Invalid phone number format: " + phoneNumber);
+                return false;
             }
 
             // ✅ Send message using Twilio
@@ -245,6 +245,49 @@ public class WhatsAppService {
             System.err.println("[WHATSAPP ERROR] Failed to send birthday wish: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Normalize a phone number to Twilio WhatsApp format.
+     * Accepts values like:
+     * - +947XXXXXXXX
+     * - 947XXXXXXXX
+     * - whatsapp:+947XXXXXXXX
+     *
+     * @param phoneNumber raw phone number from DB or form
+     * @return formatted WhatsApp number or null if invalid
+     */
+    private static String normalizeWhatsAppNumber(String phoneNumber) {
+        if (phoneNumber == null) {
+            return null;
+        }
+
+        String cleaned = phoneNumber.trim();
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+
+        if (cleaned.startsWith("whatsapp:")) {
+            cleaned = cleaned.substring("whatsapp:".length()).trim();
+        }
+
+        // Keep only digits and a leading plus sign.
+        cleaned = cleaned.replaceAll("[^0-9+]", "");
+
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+
+        if (!cleaned.startsWith("+")) {
+            cleaned = "+" + cleaned;
+        }
+
+        // Twilio WhatsApp requires E.164 style numbers after whatsapp:
+        if (!cleaned.matches("\\+[1-9]\\d{7,14}")) {
+            return null;
+        }
+
+        return "whatsapp:" + cleaned;
     }
 }
 
